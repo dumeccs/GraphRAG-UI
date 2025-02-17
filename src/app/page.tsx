@@ -256,7 +256,7 @@ export default function Component() {
               {messages.length == 0 ? (
                 <div className="flex flex-col items-center justify-center h-full">
                   <h2 className="text-2xl font-bold mb-4">
-                    Welcome to Elobot!
+                    Welcome to Eloh!
                   </h2>
                   <p className="text-center text-gray-600 max-w-md mb-8">
                     Clear, instant answers on UK(FCA/CMA) anti-greenwashing regulations. 
