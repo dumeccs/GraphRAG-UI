@@ -259,10 +259,14 @@ export default function Component() {
                     Welcome to NeonChat!
                   </h2>
                   <p className="text-center text-gray-600 max-w-md mb-8">
-                    NeonChat is your personal AI-powered assistant, ready to
-                    help you navigate your day and provide valuable insights.
-                    We&apos;re here to make your life easier. Let&apos;s get
-                    started on this exciting journey together!
+                    Welcome to the Greenwashing Compliance Chatbot!
+                    This AI-powered assistant is designed to help you navigate 
+                    the complex world of UK greenwashing regulations, 
+                    ensuring your business stays compliant with FCA and 
+                    CMA guidelines. Ask your questions, clarify your doubts, 
+                    and get instant, reliable answers.
+                    Let&apos;s make your sustainability journey transparent and compliant!
+                   
                   </p>
                   <div className="grid grid-cols-1 gap-4  max-w-md">
                     <Button
