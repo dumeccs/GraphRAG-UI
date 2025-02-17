@@ -256,13 +256,12 @@ export default function Component() {
               {messages.length == 0 ? (
                 <div className="flex flex-col items-center justify-center h-full">
                   <h2 className="text-2xl font-bold mb-4">
-                    Welcome to NeonChat!
+                    Welcome to Elobot!
                   </h2>
                   <p className="text-center text-gray-600 max-w-md mb-8">
-                    Welcome to the Greenwashing Compliance Chatbot!
-                    Clear, instant answers on UK greenwashing regulations, in line with FCA and CMA guidelines. 
-                    Ask your first questions and get instant, reliable answers.
-                    Let&apos;s make your sustainability journey transparent and compliant!
+                    Clear, instant answers on UK(FCA/CMA) anti-greenwashing regulations. 
+                    Ask your first questions and 
+                    Let&apos;s make your sustainability🌍♻️ journey transparent and compliant!
                    
                   </p>
                   <div className="grid grid-cols-1 gap-4  max-w-md">
