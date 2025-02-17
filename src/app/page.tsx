@@ -260,11 +260,9 @@ export default function Component() {
                   </h2>
                   <p className="text-center text-gray-600 max-w-md mb-8">
                     Welcome to the Greenwashing Compliance Chatbot!
-                    This AI-powered assistant is designed to help you navigate 
-                    the complex world of UK greenwashing regulations, 
-                    ensuring your business stays compliant with FCA and 
-                    CMA guidelines. Ask your questions, clarify your doubts, 
-                    and get instant, reliable answers.
+                    This AI-powered assistant is designed to help you navigate the complex world of UK greenwashing regulations, ensuring your business stays compliant with FCA and 
+                    CMA guidelines. 
+                    Ask your questions, clarify your doubts, and get instant, reliable answers.
                     Let&apos;s make your sustainability journey transparent and compliant!
                    
                   </p>
