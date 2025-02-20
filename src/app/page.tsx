@@ -302,12 +302,12 @@ export default function Component() {
                       variant="outline"
                       className="flex items-center justify-center"
                       onClick={() => {
-                        setInitInput("What are the causes of greenwashing?");
+                        setInitInput("What is greenwashing?");
                         inputRef.current?.focus();
                       }}
                     >
                       <MessageCircle className="mr-2 h-4 w-4" />
-                      What are the causes of greenwashing?
+                      What is greenwashing?
                     </Button>
                     <Button
                       variant="outline"
