@@ -26,6 +26,13 @@ interface Message {
   role: "user" | "assistant" | "system";
 }
 
+const cleanInput = (input: string): string => {
+  return input
+    .replace(/\\n/g, "\n")
+    .replace("<br>", "\n")
+    .replace("</br>", "\n");
+};
+
 const LoadingDots = () => {
   return (
     <div className="flex space-x-1">
@@ -53,109 +60,140 @@ const Avatar = ({ src, alt }: { src: string; alt: string }) => {
   );
 };
 
-const MarkdownContent = ({ content }: { content: string }) => (
-  <ReactMarkdown
-    remarkPlugins={[remarkGfm]}
-    components={{
-      ul({ children, className, ...props }) {
-        return (
-          <ul className={`${className} list-disc list-outside ml-6`} {...props}>
-            {children}
-          </ul>
-        );
-      },
-      ol({ children, className, ...props }) {
-        return (
-          <ol
-            className={`${className} list-decimal list-outside ml-6`}
-            {...props}
-          >
-            {children}
-          </ol>
-        );
-      },
-      li({ children, className, ...props }) {
-        return (
-          <li className={`${className}list-item my-1.5 text-sm`} {...props}>
-            {children}
-          </li>
-        );
-      },
-      br({ children, ...props }) {
-        return <br {...props} />;
-      },
-      code({ node, className, children, ...props }) {
-        const match = /language-(\w+)/.exec(className || "");
-        return match ? (
-          <pre className="bg-gray-100 rounded p-2 my-3 overflow-x-auto text-sm">
-            <code className={className} {...props}>
+const MarkdownContent = ({ content }: { content: string }) => {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        ul({ children, className, ...props }) {
+          return (
+            <ul
+              className={`${className} list-disc list-inside mb-6`}
+              {...props}
+            >
+              {children}
+            </ul>
+          );
+        },
+        ol({ children, className, ...props }) {
+          return (
+            <ol
+              className={`${className} list-decimal list-inside mb-6`}
+              {...props}
+            >
+              {children}
+            </ol>
+          );
+        },
+        li({ children, className, ...props }) {
+          return (
+            <li
+              className={`${className} leading-8 list-item my-1.5 list-inside`}
+              {...props}
+            >
+              {children}
+            </li>
+          );
+        },
+        br({ children, ...props }) {
+          return <br {...props} />;
+        },
+        code({ node, className, children, ...props }) {
+          const match = /language-(\w+)/.exec(className || "");
+          return match ? (
+            <pre className="bg-gray-100 rounded p-2 my-3 overflow-x-auto">
+              <code className={className} {...props}>
+                {children}
+              </code>
+            </pre>
+          ) : (
+            <code className={`text-sm ${className}`} {...props}>
               {children}
             </code>
-          </pre>
-        ) : (
-          <code className={`text-sm ${className}`} {...props}>
-            {children}
-          </code>
-        );
-      },
-      p({ children }) {
-        return <p className="text-sm leading-6">{children}</p>;
-      },
-    }}
-  >
-    {content}
-  </ReactMarkdown>
-);
+          );
+        },
+        p({ children }) {
+          return <p className="leading-8 mb-4">{children}</p>;
+        },
+        h1({ children }) {
+          return <h1 className="text-2xl leading-10 mb-6">{children}</h1>;
+        },
+      }}
+    >
+      {cleanInput(content)}
+    </ReactMarkdown>
+  );
+};
 
 export default function Component() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [input, setInput] = useState("what are the causes of greenwashing?");
+  const [input, setInput] = useState("");
   const [isLoading, setLoading] = useState(false);
+  const [initInput, setInitInput] = useState("");
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const messageContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLDivElement>(null);
 
   const handleInputChange = useCallback(
     (e: any) => setInput(e.currentTarget.value),
     []
   );
 
+  useEffect(() => {
+    if (inputRef.current && initInput) {
+      inputRef.current.innerText = initInput;
+      setInput(initInput);
+    }
+  }, [initInput]);
+
   const handleSubmit = useCallback(
     (e: any) => {
       e.preventDefault();
 
-      if (isLoading || newMessage !== "") {
+      if (isLoading || input === "") {
         return;
       }
 
       const id = v4();
       setMessages((messages) => [
         ...messages,
-        { role: "user", content: input, id },
+        {
+          role: "user",
+          content: input,
+          id,
+        },
       ]);
       setLoading(true);
       setInput("");
+      setInitInput("");
+      if (inputRef.current) {
+        inputRef.current.innerText = "";
+      }
 
       let airesponse = "";
 
-      const es = new EventSource(
-        `https://anti-greenwashing-graphrag-production.up.railway.app/chat?query=${input}`
-      );
+      const es = new EventSource(`http://localhost:8000/chat?query=${input}`);
       es.onmessage = function (event) {
         if (event.data == "END") {
           es.close();
+          console.log(airesponse);
           setMessages((messages) => [
             ...messages,
-            { role: "assistant", content: airesponse, id: v4() },
+            {
+              role: "assistant",
+              content: airesponse,
+              id: v4(),
+            },
           ]);
           setNewMessage("");
 
           setLoading(false);
         } else {
           setNewMessage((nm) => {
-            let n = nm + event.data;
+            let n = nm + event.data.slice(1, event.data.length - 1);
             airesponse = n;
             return n;
           });
@@ -167,7 +205,7 @@ export default function Component() {
         setLoading(false);
       };
     },
-    [input, isLoading, newMessage]
+    [input, isLoading]
   );
 
   useEffect(() => {
@@ -177,8 +215,6 @@ export default function Component() {
         messageContainerRef.current.scrollHeight;
     }
   }, [messages]);
-
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   return (
     <div
@@ -255,21 +291,18 @@ export default function Component() {
             <div className="flex-1 bg-gray-50 rounded-2xl p-6 mb-4 h-full">
               {messages.length == 0 ? (
                 <div className="flex flex-col items-center justify-center h-full">
-                  <h2 className="text-2xl font-bold mb-4">
-                    Welcome to Eloh!
-                  </h2>
+                  <h2 className="text-2xl font-bold mb-4">Welcome to Eloh!</h2>
                   <p className="text-center text-gray-600 max-w-md mb-8">
-                    Clear, instant answers on UK(FCA/CMA) anti-greenwashing regulations. 
-                    Ask your first questions and 
-                    Let&apos;s make your sustainability🌍♻️ journey transparent and compliant!
-                   
+                    Clear, instant answers on UK(FCA/CMA) anti-greenwashing
+                    regulations. Ask your first questions and Let&apos;s make
+                    your sustainability🌍♻️ journey transparent and compliant!
                   </p>
                   <div className="grid grid-cols-1 gap-4  max-w-md">
                     <Button
                       variant="outline"
                       className="flex items-center justify-center"
                       onClick={() => {
-                        setInput("What are the causes of greenwashing?");
+                        setInitInput("What are the causes of greenwashing?");
                         inputRef.current?.focus();
                       }}
                     >
@@ -280,7 +313,7 @@ export default function Component() {
                       variant="outline"
                       className="flex items-center justify-center"
                       onClick={() => {
-                        setInput("How do I avoid greenwashing?");
+                        setInitInput("How do I avoid greenwashing?");
                         inputRef.current?.focus();
                       }}
                     >
@@ -348,19 +381,24 @@ export default function Component() {
             className="flex items-center relative gap-4 w-[1024px] mx-auto"
             onSubmit={handleSubmit}
           >
-            <Textarea
+            <div
+              contentEditable
               ref={inputRef}
-              className="mt-4"
-              placeholder="Type your message here..."
-              value={input}
+              className="min-h-[60px] max-h-[300px] w-full rounded-md border  bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-4"
               onChange={handleInputChange}
+              onInput={(e) => {
+                const text = e.currentTarget.innerText || "";
+                setInput(text);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                   e.preventDefault();
-                  handleSubmit(e);
+                  if (input.trim() !== "") {
+                    handleSubmit(e);
+                  }
                 }
               }}
-            />
+            ></div>
             <Button
               disabled={isLoading || newMessage !== ""}
               size="icon"
