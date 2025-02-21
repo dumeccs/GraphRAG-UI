@@ -175,7 +175,7 @@ export default function Component() {
 
       let airesponse = "";
 
-      const es = new EventSource(`http://localhost:8000/chat?query=${input}`);
+      const es = new EventSource(`https://anti-greenwashing-graphrag-production.up.railway.app/chat?query=${input}`);
       es.onmessage = function (event) {
         if (event.data == "END") {
           es.close();
