@@ -1,5 +1,11 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "next-auth/react";
 import {
@@ -68,7 +74,7 @@ const MarkdownContent = ({ content }: { content: string }) => {
         ul({ children, className, ...props }) {
           return (
             <ul
-              className={`${className} list-disc list-inside mb-6`}
+              className={`${className} list-disc list-inside space-y-3`}
               {...props}
             >
               {children}
@@ -78,7 +84,7 @@ const MarkdownContent = ({ content }: { content: string }) => {
         ol({ children, className, ...props }) {
           return (
             <ol
-              className={`${className} list-decimal list-inside mb-6`}
+              className={`${className} list-decimal list-inside space-y-3`}
               {...props}
             >
               {children}
@@ -88,7 +94,7 @@ const MarkdownContent = ({ content }: { content: string }) => {
         li({ children, className, ...props }) {
           return (
             <li
-              className={`${className} leading-8 list-item my-1.5 list-inside`}
+              className={`${className} leading-8 list-item list-inside`}
               {...props}
             >
               {children}
@@ -98,7 +104,14 @@ const MarkdownContent = ({ content }: { content: string }) => {
         br({ children, ...props }) {
           return <br {...props} />;
         },
-        code({ node, className, children, ...props }) {
+        div({ children, ...props }) {
+          return (
+            <div className="space-y-3" {...{ ...props }}>
+              {children}
+            </div>
+          );
+        },
+        code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || "");
           return match ? (
             <pre className="bg-gray-100 rounded p-2 my-3 overflow-x-auto">
@@ -113,7 +126,11 @@ const MarkdownContent = ({ content }: { content: string }) => {
           );
         },
         p({ children }) {
-          return <p className="leading-8 mb-4">{children}</p>;
+          return (
+            <p className="leading-5 lg:leading-8 text-sm lg:text-base">
+              {children}
+            </p>
+          );
         },
         h1({ children }) {
           return <h1 className="text-2xl leading-10 mb-6">{children}</h1>;
@@ -126,7 +143,7 @@ const MarkdownContent = ({ content }: { content: string }) => {
 };
 
 export default function Component() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [input, setInput] = useState("");
@@ -136,6 +153,10 @@ export default function Component() {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    setSidebarOpen(window.innerWidth > 768);
+  }, []);
 
   const handleInputChange = useCallback(
     (e: any) => setInput(e.currentTarget.value),
@@ -175,7 +196,9 @@ export default function Component() {
 
       let airesponse = "";
 
-      const es = new EventSource(`https://anti-greenwashing-graphrag-production.up.railway.app/chat?query=${input}`);
+      const es = new EventSource(
+        `https://anti-greenwashing-graphrag-production.up.railway.app/chat?query=${input}`
+      );
       es.onmessage = function (event) {
         if (event.data == "END") {
           es.close();
@@ -276,7 +299,7 @@ export default function Component() {
         }`}
       >
         <header className="bg-white p-4 flex justify-between items-center border-b absolute w-full top-0 left-0 right-0">
-          <div className="w-[1024px] mx-auto">
+          <div className="w-screen xl:w-[1024px] mx-auto">
             <Button variant="ghost" size="icon" onClick={toggleSidebar}>
               <Menu className="h-6 w-6" />
             </Button>
@@ -285,9 +308,13 @@ export default function Component() {
 
         <main
           ref={messageContainerRef}
-          className="flex-1 p-6 pb-0 flex flex-col bg-white mt-[69px] h-[calc(100%-69px)] overflow-scroll scroll-smooth"
+          className="flex-1 p-6 pb-0 flex flex-col bg-white mt-[69px] h-[calc(100%-69px)] overflow-y-scroll overflow-x-hidden scroll-smooth"
         >
-          <div className="w-[1024px] mx-auto h-full">
+          <div
+            className={`${
+              sidebarOpen ? "w-screen" : "w-full"
+            } xl:w-[1024px] mx-auto h-full`}
+          >
             <div className="flex-1 bg-gray-50 rounded-2xl p-6 mb-4 h-full">
               {messages.length == 0 ? (
                 <div className="flex flex-col items-center justify-center h-full">
@@ -378,23 +405,28 @@ export default function Component() {
 
         <div className="bg-white p-6 pt-0">
           <form
-            className="flex items-center relative gap-4 w-[1024px] mx-auto"
+            className={`flex items-center relative gap-4 ${
+              sidebarOpen ? "w-screen" : "w-full"
+            } xl:w-[1024px] mx-auto`}
             onSubmit={handleSubmit}
           >
             <div
               contentEditable
               ref={inputRef}
-              className="min-h-[60px] max-h-[300px] w-full rounded-md border  bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-4"
+              className="min-h-[80px] max-h-[300px] w-full rounded-xl border  bg-transparent p-3 text-sm shadow-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-offset-2 outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-4"
               onChange={handleInputChange}
               onInput={(e) => {
                 const text = e.currentTarget.innerText || "";
                 setInput(text);
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  if (input.trim() !== "") {
-                    handleSubmit(e);
+                if (e.key === "Enter") {
+                  if (e.shiftKey) {
+                  } else {
+                    e.preventDefault();
+                    if (input.trim() !== "") {
+                      handleSubmit(e);
+                    }
                   }
                 }
               }}
@@ -402,7 +434,7 @@ export default function Component() {
             <Button
               disabled={isLoading || newMessage !== ""}
               size="icon"
-              className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl"
+              className="bg-blue-500 absolute hover:bg-blue-600 text-white rounded-full bottom-2 right-2 flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl"
               onClick={handleSubmit}
             >
               <Send className="h-5 w-5" />
