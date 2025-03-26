@@ -1,447 +1,226 @@
 "use client";
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useLayoutEffect,
-} from "react";
-import { Button } from "@/components/ui/button";
-import { signOut } from "next-auth/react";
-import {
-  MessageCircle,
-  FileQuestion,
-  CreditCard,
-  Settings,
-  LogOut,
-  Menu,
-  Brain,
-  Send,
-} from "lucide-react";
-import Image from "next/image";
-import { GeistSans } from "geist/font/sans";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { toast } from "sonner";
-import { Textarea } from "@/components/ui/textarea";
-import { v4 } from "uuid";
+import React, { useEffect } from "react";
+import Navbar from "@/components/Navbar";
+import Hero from "@/components/Hero";
+import Features from "@/components/Features";
+import HowItWorks from "@/components/HowItWorks";
+import CallToAction from "@/components/CallToAction";
+import Footer from "@/components/Footer";
+import { Check } from "lucide-react";
 
-interface Message {
-  id: string;
-  content: string;
-  role: "user" | "assistant" | "system";
-}
-
-const cleanInput = (input: string): string => {
-  return input
-    .replace(/\\n/g, "\n")
-    .replace("<br>", "\n")
-    .replace("</br>", "\n");
-};
-
-const LoadingDots = () => {
-  return (
-    <div className="flex space-x-1">
-      <div
-        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-        style={{ animationDelay: "0s" }}
-      ></div>
-      <div
-        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-        style={{ animationDelay: "0.2s" }}
-      ></div>
-      <div
-        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-        style={{ animationDelay: "0.4s" }}
-      ></div>
-    </div>
-  );
-};
-
-const Avatar = ({ src, alt }: { src: string; alt: string }) => {
-  return (
-    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-      <Image src={src} alt={alt} width={32} height={32} />
-    </div>
-  );
-};
-
-const MarkdownContent = ({ content }: { content: string }) => {
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        ul({ children, className, ...props }) {
-          return (
-            <ul
-              className={`${className} list-disc list-inside space-y-3`}
-              {...props}
-            >
-              {children}
-            </ul>
-          );
-        },
-        ol({ children, className, ...props }) {
-          return (
-            <ol
-              className={`${className} list-decimal list-inside space-y-3`}
-              {...props}
-            >
-              {children}
-            </ol>
-          );
-        },
-        li({ children, className, ...props }) {
-          return (
-            <li
-              className={`${className} leading-8 list-item list-inside`}
-              {...props}
-            >
-              {children}
-            </li>
-          );
-        },
-        br({ children, ...props }) {
-          return <br {...props} />;
-        },
-        div({ children, ...props }) {
-          return (
-            <div className="space-y-3" {...{ ...props }}>
-              {children}
-            </div>
-          );
-        },
-        code({ className, children, ...props }) {
-          const match = /language-(\w+)/.exec(className || "");
-          return match ? (
-            <pre className="bg-gray-100 rounded p-2 my-3 overflow-x-auto">
-              <code className={className} {...props}>
-                {children}
-              </code>
-            </pre>
-          ) : (
-            <code className={`text-sm ${className}`} {...props}>
-              {children}
-            </code>
-          );
-        },
-        p({ children }) {
-          return (
-            <p className="leading-5 lg:leading-8 text-sm lg:text-base">
-              {children}
-            </p>
-          );
-        },
-        h1({ children }) {
-          return <h1 className="text-2xl leading-10 mb-6">{children}</h1>;
-        },
-      }}
-    >
-      {cleanInput(content)}
-    </ReactMarkdown>
-  );
-};
-
-export default function Component() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [input, setInput] = useState("");
-  const [isLoading, setLoading] = useState(false);
-  const [initInput, setInitInput] = useState("");
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-  const messageContainerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    setSidebarOpen(window.innerWidth > 768);
+const Index = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
   }, []);
 
-  const handleInputChange = useCallback(
-    (e: any) => setInput(e.currentTarget.value),
-    []
-  );
-
-  useEffect(() => {
-    if (inputRef.current && initInput) {
-      inputRef.current.innerText = initInput;
-      setInput(initInput);
-    }
-  }, [initInput]);
-
-  const handleSubmit = useCallback(
-    (e: any) => {
-      e.preventDefault();
-
-      if (isLoading || input === "") {
-        return;
-      }
-
-      const id = v4();
-      setMessages((messages) => [
-        ...messages,
-        {
-          role: "user",
-          content: input,
-          id,
-        },
-      ]);
-      setLoading(true);
-      setInput("");
-      setInitInput("");
-      if (inputRef.current) {
-        inputRef.current.innerText = "";
-      }
-
-      let airesponse = "";
-
-      const es = new EventSource(
-        `https://anti-greenwashing-graphrag-production.up.railway.app/chat?query=${input}`
-      );
-      es.onmessage = function (event) {
-        if (event.data == "END") {
-          es.close();
-          console.log(airesponse);
-          setMessages((messages) => [
-            ...messages,
-            {
-              role: "assistant",
-              content: airesponse,
-              id: v4(),
-            },
-          ]);
-          setNewMessage("");
-
-          setLoading(false);
-        } else {
-          setNewMessage((nm) => {
-            let n = nm + event.data.slice(1, event.data.length - 1);
-            airesponse = n;
-            return n;
-          });
-        }
-      };
-
-      es.onerror = function (ev) {
-        toast.error("An error occurred", { description: JSON.stringify(ev) });
-        setLoading(false);
-      };
-    },
-    [input, isLoading]
-  );
-
-  useEffect(() => {
-    // Scroll to bottom of message container when new messages are added
-    if (messageContainerRef.current) {
-      messageContainerRef.current.scrollTop =
-        messageContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
   return (
-    <div
-      className={`flex h-screen bg-gray-100 ${GeistSans.className}`}
-      style={{
-        background: "radial-gradient(circle at center left, #010b49, #000000)",
-      }}
-    >
-      <div
-        className={`w-64 text-white p-4 flex flex-col transition-all duration-300 ease-in-out ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } fixed left-0 top-0 bottom-0 z-50`}
-      >
-        <div className="flex items-center mb-8">
-          <h1 className="text-xl font-bold">GraphRag</h1>
-        </div>
-        {/* <h2 className="text-xs font-semibold mb-2 text-gray-400">
-          CONVERSATIONS
-        </h2> */}
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
 
-        <div className="mt-auto">
-          <Button
-            variant="ghost"
-            className="justify-start mb-2 w-full text-white hover:text-white hover:bg-white/10"
-          >
-            <FileQuestion className="mr-2 h-4 w-4" />
-            FAQ
-          </Button>
-          <Button
-            variant="ghost"
-            className="justify-start mb-2 w-full text-white hover:text-white hover:bg-white/10"
-          >
-            <CreditCard className="mr-2 h-4 w-4" />
-            Subscription
-          </Button>
-          <Button
-            variant="ghost"
-            className="justify-start mb-2 w-full text-white hover:text-white hover:bg-white/10"
-            // onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Button>
-          <Button
-            variant="ghost"
-            className="justify-start w-full text-white hover:text-white hover:bg-white/10"
-            onClick={() => signOut()}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
-        </div>
-      </div>
+      <main className="flex-grow pt-16">
+        <Hero />
 
-      {/* Main Content */}
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out relative overflow-hidden ${
-          sidebarOpen ? "ml-64 m-4 rounded-xl" : "ml-0 m-0 rounded-none"
-        }`}
-      >
-        <header className="bg-white p-4 flex justify-between items-center border-b absolute w-full top-0 left-0 right-0">
-          <div className="w-screen xl:w-[1024px] mx-auto">
-            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-              <Menu className="h-6 w-6" />
-            </Button>
-          </div>
-        </header>
+        <section id="features">
+          <Features />
+        </section>
 
-        <main
-          ref={messageContainerRef}
-          className="flex-1 p-6 pb-0 flex flex-col bg-white mt-[69px] h-[calc(100%-69px)] overflow-y-scroll overflow-x-hidden scroll-smooth"
-        >
-          <div
-            className={`${
-              sidebarOpen ? "w-screen" : "w-full"
-            } xl:w-[1024px] mx-auto h-full`}
-          >
-            <div className="flex-1 bg-gray-50 rounded-2xl p-6 mb-4 h-full">
-              {messages.length == 0 ? (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <h2 className="text-2xl font-bold mb-4">Welcome to Eloh!</h2>
-                  <p className="text-center text-gray-600 max-w-md mb-8">
-                    Clear, instant answers on UK(FCA/CMA) anti-greenwashing
-                    regulations. Ask your first questions and Let&apos;s make
-                    your sustainability🌍♻️ journey transparent and compliant!
-                  </p>
-                  <div className="grid grid-cols-1 gap-4  max-w-md">
-                    <Button
-                      variant="outline"
-                      className="flex items-center justify-center"
-                      onClick={() => {
-                        setInitInput("What is greenwashing?");
-                        inputRef.current?.focus();
-                      }}
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      What is greenwashing?
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex items-center justify-center"
-                      onClick={() => {
-                        setInitInput("How do I avoid greenwashing?");
-                        inputRef.current?.focus();
-                      }}
-                    >
-                      <Brain className="mr-2 h-4 w-4" />
-                      How do I avoid greenwashing?
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex items-start ${
-                        message.role === "user"
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
-                    >
-                      {message.role === "assistant" && (
-                        <Avatar src="/image.png" alt="AI Avatar" />
-                      )}
-                      <div
-                        className={`max-w-[70%] rounded-3xl p-3 mx-2 ${
-                          message.role === "user"
-                            ? "bg-[#08193b] text-white"
-                            : "bg-gray-200 text-gray-800"
-                        }`}
-                      >
-                        <MarkdownContent content={message.content} />
-                      </div>
-                      {message.role === "user" && (
-                        <Avatar src="/user.png" alt="User Avatar" />
-                      )}
-                    </div>
-                  ))}
+        <section id="how-it-works">
+          <HowItWorks />
+        </section>
 
-                  {isLoading && !newMessage && (
-                    <div className="flex items-start justify-start">
-                      <Avatar src="/image.png" alt="AI Avatar" />
-                      <div className="bg-gray-200 text-gray-800 rounded-lg p-3 mx-2">
-                        <LoadingDots />
-                      </div>
-                    </div>
-                  )}
+        <section id="faq" className="py-20 bg-white">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <h2 className="text-3xl font-bold text-greenwise-dark-blue mb-4">
+                Frequently Asked Questions
+              </h2>
+              <p className="text-gray-600">
+                Get answers to common questions about sustainability and our
+                platform.
+              </p>
+            </div>
 
-                  {isLoading && newMessage && (
-                    <div className={"flex items-start justify-start"}>
-                      <Avatar src="/image.png" alt="AI Avatar" />
-                      <div
-                        className={`max-w-[70%] rounded-3xl p-3 mx-2 bg-gray-200 text-gray-800`}
-                      >
-                        <MarkdownContent content={newMessage} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              <div className="bg-greenwise-gray rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-greenwise-dark-blue mb-3">
+                  What is greenwashing?
+                </h3>
+                <p className="text-gray-600">
+                  Greenwashing involves making misleading or unsubstantiated
+                  claims about the environmental benefits of a product, service,
+                  or company practice to appear more environmentally friendly
+                  than they actually are.
+                </p>
+              </div>
+
+              <div className="bg-greenwise-gray rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-greenwise-dark-blue mb-3">
+                  How does Grnwize identify greenwashing?
+                </h3>
+                <p className="text-gray-600">
+                grnwize analyzes claims against verified data, industry
+                  standards, and regulatory requirements. We look for vague
+                  language, missing evidence, hidden trade-offs, and
+                  cherry-picked information.
+                </p>
+              </div>
+
+              <div className="bg-greenwise-gray rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-greenwise-dark-blue mb-3">
+                  Is Grnwize only for businesses?
+                </h3>
+                <p className="text-gray-600">
+                  No, Grnwize is designed for both consumers seeking to make
+                  informed choices and businesses looking to improve their
+                  sustainability practices and communications.
+                </p>
+              </div>
+
+              <div className="bg-greenwise-gray rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-greenwise-dark-blue mb-3">
+                  What information sources does Grnwize use?
+                </h3>
+                <p className="text-gray-600">
+                Grnwize draws from scientific research, regulatory
+                  standards, industry best practices, third-party
+                  certifications, and company-reported data to provide
+                  comprehensive analysis.
+                </p>
+              </div>
+
+              <div className="bg-greenwise-gray rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-greenwise-dark-blue mb-3">
+                  Can Grnwize help with my company&apos;s sustainability
+                  reporting?
+                </h3>
+                <p className="text-gray-600">
+                  Yes, Grnwize can help identify potential greenwashing risks
+                  in your communications and provide guidance on how to make
+                  accurate, substantiated environmental claims.
+                </p>
+              </div>
+
+              <div className="bg-greenwise-gray rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-greenwise-dark-blue mb-3">
+                  How current is Grnwize&apos;s information?
+                </h3>
+                <p className="text-gray-600">
+                  Our database is regularly updated to reflect the latest
+                  sustainability research, regulatory changes, and company
+                  practices to ensure our analysis remains relevant and
+                  accurate.
+                </p>
+              </div>
             </div>
           </div>
-        </main>
+        </section>
 
-        <div className="bg-white p-6 pt-0">
-          <form
-            className={`flex items-center relative gap-4 ${
-              sidebarOpen ? "w-screen" : "w-full"
-            } xl:w-[1024px] mx-auto`}
-            onSubmit={handleSubmit}
-          >
-            <div
-              contentEditable
-              ref={inputRef}
-              className="min-h-[80px] max-h-[300px] w-full rounded-xl border  bg-transparent p-3 text-sm shadow-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-offset-2 outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-4"
-              onChange={handleInputChange}
-              onInput={(e) => {
-                const text = e.currentTarget.innerText || "";
-                setInput(text);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  if (e.shiftKey) {
-                  } else {
-                    e.preventDefault();
-                    if (input.trim() !== "") {
-                      handleSubmit(e);
-                    }
-                  }
-                }
-              }}
-            ></div>
-            <Button
-              disabled={isLoading || newMessage !== ""}
-              size="icon"
-              className="bg-blue-500 absolute hover:bg-blue-600 text-white rounded-full bottom-2 right-2 flex items-center justify-center transition-all duration-300 shadow-lg hover:shadow-xl"
-              onClick={handleSubmit}
-            >
-              <Send className="h-5 w-5" />
-            </Button>
-          </form>
-        </div>
-      </div>
+        {/* <section id="about" className="py-20 bg-greenwise-light-blue">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2 className="text-3xl font-bold text-greenwise-dark-blue mb-6">
+                  About GreenWise
+                </h2>
+                <p className="text-gray-700 mb-4">
+                  GreenWise was founded with a mission to bring transparency to
+                  sustainability claims and help combat the rising tide of
+                  greenwashing in corporate communications.
+                </p>
+                <p className="text-gray-700 mb-4">
+                  In a world where environmental concerns are increasingly
+                  important to consumers and stakeholders, we believe that
+                  accurate information is essential for making meaningful
+                  progress on sustainability.
+                </p>
+                <p className="text-gray-700 mb-6">
+                  Our team combines expertise in environmental science,
+                  regulatory compliance, and artificial intelligence to create a
+                  powerful tool that helps both businesses and consumers
+                  navigate the complex landscape of sustainability claims.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-green-600 rounded-full p-1 mt-1">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                    <p className="text-gray-700">
+                      Founded by environmental scientists and tech experts
+                    </p>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-green-600 rounded-full p-1 mt-1">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                    <p className="text-gray-700">
+                      Partnered with leading sustainability certification bodies
+                    </p>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="bg-green-600 rounded-full p-1 mt-1">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                    <p className="text-gray-700">
+                      Committed to ongoing research and development
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="bg-white shadow-xl rounded-lg p-6">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-greenwise-dark-blue mb-2">
+                        Our Mission
+                      </h3>
+                      <p className="text-gray-600">
+                        To empower people with the knowledge and tools they need
+                        to identify genuine sustainability efforts and hold
+                        companies accountable for their environmental claims.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-semibold text-greenwise-dark-blue mb-2">
+                        Our Vision
+                      </h3>
+                      <p className="text-gray-600">
+                        A world where transparency in environmental
+                        communication leads to meaningful action and real
+                        sustainability progress.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-semibold text-greenwise-dark-blue mb-2">
+                        Our Values
+                      </h3>
+                      <ul className="list-disc list-inside text-gray-600 space-y-1">
+                        <li>Scientific accuracy</li>
+                        <li>Transparency</li>
+                        <li>Educational empowerment</li>
+                        <li>Continuous improvement</li>
+                        <li>Accessible knowledge</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute -top-4 -right-4 w-20 h-20 bg-greenwise-dark-blue rounded-lg transform rotate-6 -z-10"></div>
+                <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-green-600 rounded-lg transform -rotate-6 -z-10"></div>
+              </div>
+            </div>
+          </div>
+        </section> */}
+
+        {/* <CallToAction /> */}
+      </main>
+
+      <Footer />
     </div>
   );
-}
+};
+
+export default Index;
